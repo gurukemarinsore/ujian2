@@ -822,16 +822,6 @@
           </div>
         </div>
 
-        <div style="margin-top:18px; padding:16px; border:1px solid var(--line); border-radius:14px; background:#f8fafc;">
-          <label class="field">Google OAuth Client ID
-            <input class="input" id="settingGoogleClientId" type="text" autocomplete="off" spellcheck="false"
-              placeholder="contoh: 123456789-abc....apps.googleusercontent.com" />
-          </label>
-          <div style="margin-top:8px;color:var(--muted);font-size:12px;line-height:1.5;">
-            Diperlukan untuk login Gmail siswa di GitHub Pages. Client ID tidak berisi password/secret dan aman digunakan pada frontend.
-          </div>
-        </div>
-
         <div class="action-row" style="justify-content:space-between; margin-top:18px;">
           <button class="btn btn-danger" id="adminLogoutBtn" type="button">Keluar</button>
           <button class="btn btn-primary" id="adminSaveBtn" type="button">Simpan Pengaturan</button>
@@ -845,9 +835,10 @@
 
   <script>
     /* =========================================================
-       KONFIGURASI - GANTI 1 BARIS INI SETELAH GAS DI-DEPLOY
+       KONFIGURASI APLIKASI
        ========================================================= */
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzysqOfBFrC_piiLJZtXc8b-qLtAwlMOgEKJCWZqyeXcn2aMpkxGjeq0BsbNxuSkVCunQ/exec';
+    const GOOGLE_CLIENT_ID = '92856586886-9bmt4h7fl40cnasu06rd6hua8vcbrf6n.apps.googleusercontent.com';
 
     /* =========================================================
        BANK SOAL
@@ -1210,15 +1201,10 @@
 
       try {
         setStatus($('loginStatus'), 'Memuat konfigurasi kuis...');
-        const config = await getPublicConfig();
-        if (!config.googleLoginConfigured || !config.googleClientId) {
-          setStatus($('loginStatus'), 'Login Google belum dikonfigurasi. Admin: buka Panel Admin dan isi Google OAuth Client ID.', '');
-          return;
-        }
-
+        await getPublicConfig();
         await loadGoogleIdentity();
         google.accounts.id.initialize({
-          client_id: config.googleClientId,
+          client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredential,
           auto_select: false,
           cancel_on_tap_outside: true
@@ -1740,7 +1726,6 @@
       $('settingShowScore').checked = !!settings.showScore;
       $('settingShuffleQuestions').checked = !!settings.shuffleQuestions;
       $('settingShuffleOptions').checked = !!settings.shuffleOptions;
-      $('settingGoogleClientId').value = settings.googleClientId || '';
     }
 
     async function adminLogin() {
@@ -1789,13 +1774,12 @@
           settings: {
             showScore: $('settingShowScore').checked,
             shuffleQuestions: $('settingShuffleQuestions').checked,
-            shuffleOptions: $('settingShuffleOptions').checked,
-            googleClientId: $('settingGoogleClientId').value.trim()
+            shuffleOptions: $('settingShuffleOptions').checked
           }
         });
         applyAdminSettings(result.settings || {});
         setStatus($('adminSettingsStatus'), result.message || 'Pengaturan berhasil disimpan.', 'success');
-        // Segarkan konfigurasi publik; jika Client ID baru diisi, aktifkan login tanpa reload halaman.
+        // Segarkan konfigurasi publik setelah perubahan pengaturan kuis.
         try {
           await getPublicConfig();
           if (!state.previewMode && !state.idToken) await initStudentLogin();
